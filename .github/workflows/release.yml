@@ -1,0 +1,68 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php: ["7.4", "8.0", "8.1", "8.2", "8.3", "8.4"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+      - name: PHP syntax check
+        run: find . -name '*.php' -not -path './.git/*' -print0 | xargs -0 -n1 php -l
+
+  release:
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check version matches tag
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          HEADER=$(grep -m1 -E '^\s*\*\s*Version:' siteguard-security.php | sed -E 's/.*Version:\s*//; s/\s*$//')
+          CONST=$(grep -m1 "define( 'SITEGUARD_VERSION'" siteguard-security.php | sed -E "s/.*'SITEGUARD_VERSION', '([^']+)'.*/\1/")
+          STABLE=$(grep -m1 -E '^Stable tag:' readme.txt | sed -E 's/Stable tag:\s*//; s/\s*$//')
+          echo "tag=$TAG header=$HEADER const=$CONST stable=$STABLE"
+          if [ "$TAG" != "$HEADER" ] || [ "$TAG" != "$CONST" ] || [ "$TAG" != "$STABLE" ]; then
+            echo "::error::Version mismatch. Bump Version header, SITEGUARD_VERSION and readme Stable tag to $TAG."
+            exit 1
+          fi
+
+      - name: Build zip
+        run: |
+          mkdir -p build/siteguard-security
+          rsync -a --exclude '.git' --exclude '.github' --exclude 'build' --exclude '.gitignore' --exclude '.gitattributes' --exclude 'README.md' --exclude 'CHANGELOG.md' ./ build/siteguard-security/
+          cd build && zip -qr siteguard-security.zip siteguard-security
+          unzip -l siteguard-security.zip | tail -n 3
+
+      - name: Release notes from CHANGELOG.md
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          awk -v v="$TAG" '
+            $0 ~ "^## \\[?"v"\\]?" {on=1; next}
+            on && /^## / {exit}
+            on {print}
+          ' CHANGELOG.md > notes.md
+          if [ ! -s notes.md ]; then echo "Release $TAG" > notes.md; fi
+          cat notes.md
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" build/siteguard-security.zip \
+            --title "SiteGuard Security ${GITHUB_REF_NAME#v}" \
+            --notes-file notes.md

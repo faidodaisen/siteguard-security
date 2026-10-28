@@ -1,0 +1,7 @@
+* text=auto eol=lf
+*.js -text
+/.github export-ignore
+/README.md export-ignore
+/CHANGELOG.md export-ignore
+/.gitattributes export-ignore
+/.gitignore export-ignore
