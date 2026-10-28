@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.0.2
+- Dashboard → Updates → **Check again** now also refreshes the GitHub release check.
+
 ## 1.0.1
 - Test release for the GitHub updater (no functional change).
 

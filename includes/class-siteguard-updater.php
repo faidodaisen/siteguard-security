@@ -26,6 +26,14 @@ class SiteGuard_Updater {
 		add_filter( 'upgrader_source_selection', array( __CLASS__, 'fix_source_dir' ), 10, 4 );
 		add_filter( 'upgrader_pre_download', array( __CLASS__, 'download' ), 10, 4 );
 		add_action( 'upgrader_process_complete', array( __CLASS__, 'clear_cache' ), 10, 0 );
+		// Dashboard → Updates → "Check again" must also refresh our GitHub lookup.
+		add_action( 'load-update-core.php', array( __CLASS__, 'maybe_force_check' ) );
+	}
+
+	public static function maybe_force_check() {
+		if ( ! empty( $_GET['force-check'] ) && current_user_can( 'update_plugins' ) ) { // phpcs:ignore
+			self::clear_cache();
+		}
 	}
 
 	/* ---------------- config ---------------- */
