@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.0.3
+- Repository is now public: updates work without a GitHub token (token field kept as optional).
+
 ## 1.0.2
 - Dashboard → Updates → **Check again** now also refreshes the GitHub release check.
 

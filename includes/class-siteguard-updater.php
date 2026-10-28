@@ -97,8 +97,8 @@ class SiteGuard_Updater {
 		if ( 200 !== $code ) {
 			if ( 404 === $code ) {
 				$msg = '' === self::token()
-					? __( 'Repository not found. It is private: add a GitHub token under SiteGuard → Updates.', 'siteguard-security' )
-					: __( 'Repository not found, or the token cannot read it. The token needs "Contents: Read-only" on this repository.', 'siteguard-security' );
+					? __( 'Repository not found on GitHub.', 'siteguard-security' )
+					: __( 'Repository not found, or the saved token cannot read it. Remove the token under SiteGuard → Updates (it is not needed for the public repository).', 'siteguard-security' );
 			} elseif ( 401 === $code || 403 === $code ) {
 				$msg = __( 'GitHub refused the request: the token is invalid/expired, or the hourly rate limit was hit.', 'siteguard-security' );
 			} else {

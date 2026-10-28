@@ -44,7 +44,7 @@ jobs:
       - name: Build zip
         run: |
           mkdir -p build/siteguard-security
-          rsync -a --exclude '.git' --exclude '.github' --exclude 'build' --exclude '.gitignore' --exclude '.gitattributes' --exclude 'README.md' --exclude 'CHANGELOG.md' ./ build/siteguard-security/
+          rsync -a --exclude '.git' --exclude '.github' --exclude 'build' --exclude '.gitignore' --exclude '.gitattributes' --exclude 'README.md' --exclude 'CHANGELOG.md' --exclude 'LICENSE' ./ build/siteguard-security/
           cd build && zip -qr siteguard-security.zip siteguard-security
           unzip -l siteguard-security.zip | tail -n 3
 

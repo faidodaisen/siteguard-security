@@ -13,15 +13,7 @@ Requires WordPress 6.0+ and PHP 7.4+.
 
 1. Download `siteguard-security.zip` from the latest [release](../../releases/latest).
 2. WP Admin → Plugins → Add New → Upload Plugin.
-3. Because this repository is private, give the site a read-only token so it can see updates:
-   - GitHub → Settings → Developer settings → Fine-grained tokens → Generate.
-   - Repository access: **Only select repositories → siteguard-security**.
-   - Permissions: **Contents: Read-only** (nothing else).
-   - Paste it in **SiteGuard → Updates**, or add to `wp-config.php`:
-     ```php
-     define( 'SITEGUARD_GITHUB_TOKEN', 'github_pat_...' );
-     ```
-4. New releases then show up in **Dashboard → Updates** and **Plugins** like any other plugin (checked every 6 hours, or press **SiteGuard → Updates → Check now**).
+3. New releases then show up in **Dashboard → Updates** and **Plugins** like any other plugin (checked every 6 hours, or press **SiteGuard → Updates → Check now**).
 
 ## Release a new version
 
@@ -36,6 +28,8 @@ Requires WordPress 6.0+ and PHP 7.4+.
    git push origin main --tags
    ```
 4. GitHub Actions lints on PHP 7.4–8.4, builds `siteguard-security.zip` and publishes the release. Sites see it within 6 hours.
+
+No token is needed (public repository). A token under **SiteGuard → Updates** is optional, only for GitHub's hourly API limit or a private fork.
 
 Only published, non-draft, non-prerelease releases with a version higher than the installed one are offered.
 

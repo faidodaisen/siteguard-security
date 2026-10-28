@@ -3,7 +3,7 @@
  * Plugin Name:       SiteGuard Security
  * Plugin URI:        https://github.com/faidodaisen/siteguard-security
  * Description:       Login protection: brute-force lockout, login logs, IP blacklist/whitelist, custom login errors, CAPTCHA (reCAPTCHA v2/v3, Cloudflare Turnstile) and two-factor authentication (authenticator app + email code).
- * Version:           1.0.2
+ * Version:           1.0.3
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Fido Design
@@ -24,7 +24,7 @@ if ( defined( 'SITEGUARD_VERSION' ) ) {
 	return; // Another copy of this plugin is already loaded.
 }
 
-define( 'SITEGUARD_VERSION', '1.0.2' );
+define( 'SITEGUARD_VERSION', '1.0.3' );
 define( 'SITEGUARD_FILE', __FILE__ );
 define( 'SITEGUARD_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SITEGUARD_URL', plugin_dir_url( __FILE__ ) );

@@ -433,7 +433,7 @@ class SiteGuard_Admin {
 			__( 'GitHub token', 'siteguard-security' ),
 			'<input type="password" class="regular-text" name="sg[github_token]" value="" autocomplete="new-password" placeholder="' . esc_attr( $has ? __( '(saved — leave empty to keep)', 'siteguard-security' ) : 'github_pat_…' ) . '">'
 			. ( $has ? '<br><label><input type="checkbox" name="sg[github_token_clear]" value="1"> ' . esc_html__( 'Remove saved token', 'siteguard-security' ) . '</label>' : '' ),
-			__( 'The repository is private, so WordPress needs a read-only token to see releases. Create a fine-grained token on GitHub with access to this one repository and the permission <strong>Contents: Read-only</strong>. Or put <code>define( \'SITEGUARD_GITHUB_TOKEN\', \'…\' );</code> in wp-config.php.', 'siteguard-security' )
+			__( 'Optional. Not needed: the repository is public. Only add a token if the site hits GitHub\'s hourly API limit (many sites behind one IP) or you install from a private fork — a fine-grained token with <strong>Contents: Read-only</strong>. Or put <code>define( \'SITEGUARD_GITHUB_TOKEN\', \'…\' );</code> in wp-config.php.', 'siteguard-security' )
 		);
 		self::form_close();
 	}
