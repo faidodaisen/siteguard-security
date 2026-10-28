@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.0.1
+- Test release for the GitHub updater (no functional change).
+
 ## 1.0.0
 - First release.
 - Brute-force lockout per IP with extended lockouts, admin email alerts, atomic counters (safe under concurrent requests).

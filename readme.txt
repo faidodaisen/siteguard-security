@@ -4,7 +4,7 @@ Tags: security, brute force, login, two factor, 2fa, captcha, turnstile
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.0.0
+Stable tag: 1.0.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -34,6 +34,9 @@ Add `define( 'SITEGUARD_DISABLE', true );` to wp-config.php, or rename the plugi
 The plugin checks https://github.com/faidodaisen/siteguard-security releases every 6 hours. The repository is private, so add a fine-grained GitHub token with "Contents: Read-only" on that repository under SiteGuard → Updates, or define `SITEGUARD_GITHUB_TOKEN` in wp-config.php.
 
 == Changelog ==
+
+= 1.0.1 =
+* Test release for the GitHub updater.
 
 = 1.0.0 =
 * First release.
