@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.0
+- Warning in wp-admin when the site is behind Cloudflare but IP detection is still REMOTE_ADDR: SiteGuard was recording the Cloudflare edge IP, so lockouts hit an IP shared by many real visitors and Login Logs / IP lists showed the wrong address. One click switches to CF-Connecting-IP. The same check covers a private proxy / load balancer sending X-Forwarded-For.
+- The setting never changes on its own: activation and updates only show the suggestion. Sites already set correctly see no change, and proxy headers are still only trusted from Cloudflare or your trusted proxies.
+- Dashboard: Your IP now shows the IP SiteGuard uses and how it was detected, plus the connecting address (REMOTE_ADDR) when it differs.
+
 ## 1.0.3
 - Repository is now public: updates work without a GitHub token (token field kept as optional).
 

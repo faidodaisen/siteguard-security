@@ -55,8 +55,22 @@ class SiteGuard_IP {
 		if ( null !== self::$ip ) {
 			return self::$ip;
 		}
-		$peer   = isset( $_SERVER['REMOTE_ADDR'] ) ? self::normalize( sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) ) : '';
-		$method = (string) SiteGuard_Options::get( 'ip_method' );
+		self::$ip = self::resolve( (string) SiteGuard_Options::get( 'ip_method' ) );
+		return self::$ip;
+	}
+
+	/** The connecting peer (REMOTE_ADDR), normalized. '' when missing or invalid. */
+	public static function peer() {
+		return isset( $_SERVER['REMOTE_ADDR'] ) ? self::normalize( sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) ) : '';
+	}
+
+	/**
+	 * Client IP for the current request as a given detection method would see it.
+	 * Same trust rules as current(); used to preview a method before it is saved.
+	 */
+	public static function resolve( $method ) {
+		$peer   = self::peer();
+		$method = (string) $method;
 		$ip     = $peer;
 
 		if ( 'REMOTE_ADDR' !== $method && isset( self::METHODS[ $method ] ) && '' !== $peer && ! empty( $_SERVER[ $method ] ) ) {
@@ -79,8 +93,51 @@ class SiteGuard_IP {
 				}
 			}
 		}
-		self::$ip = '' !== $ip ? $ip : '0.0.0.0';
-		return self::$ip;
+		return '' !== $ip ? $ip : '0.0.0.0';
+	}
+
+	/**
+	 * Detects a site that still reads REMOTE_ADDR while every request arrives through a proxy,
+	 * so lockouts and logs record the proxy instead of the visitor.
+	 *
+	 * Returns false when the setting is fine (or the method is not REMOTE_ADDR), otherwise
+	 * array( 'method' => suggested ip_method, 'peer' => REMOTE_ADDR, 'client' => IP that method gives ).
+	 * Only suggests a method whose own trust rules accept this peer, so following the
+	 * suggestion never makes SiteGuard believe a header from an untrusted peer.
+	 */
+	public static function misconfiguration() {
+		if ( 'REMOTE_ADDR' !== (string) SiteGuard_Options::get( 'ip_method' ) ) {
+			return false;
+		}
+		$peer = self::peer();
+		if ( '' === $peer ) {
+			return false;
+		}
+		if ( ! empty( $_SERVER['HTTP_CF_CONNECTING_IP'] ) && self::in_list( $peer, self::CLOUDFLARE ) ) {
+			$method = 'HTTP_CF_CONNECTING_IP';
+		} elseif ( ! empty( $_SERVER['HTTP_X_FORWARDED_FOR'] ) && self::in_list( $peer, self::PRIVATE_NETS ) && self::is_trusted_proxy( $peer ) ) {
+			$method = 'HTTP_X_FORWARDED_FOR';
+		} else {
+			return false;
+		}
+		$client = self::resolve( $method );
+		if ( '0.0.0.0' === $client || $client === $peer ) {
+			return false; // Header empty / malformed: switching would change nothing.
+		}
+		if ( 'HTTP_X_FORWARDED_FOR' === $method && self::is_trusted_proxy( $client ) ) {
+			return false; // Chain holds only internal hops: no visitor IP to switch to.
+		}
+		return array(
+			'method' => $method,
+			'peer'   => $peer,
+			'client' => $client,
+		);
+	}
+
+	/** True when the site is behind Cloudflare but ip_method is still REMOTE_ADDR. */
+	public static function behind_cloudflare_misconfigured() {
+		$m = self::misconfiguration();
+		return $m && 'HTTP_CF_CONNECTING_IP' === $m['method'];
 	}
 
 	public static function is_trusted_proxy( $ip ) {

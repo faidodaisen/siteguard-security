@@ -4,7 +4,7 @@ Tags: security, brute force, login, two factor, 2fa, captcha, turnstile
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.0.3
+Stable tag: 1.1.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -16,7 +16,7 @@ Login protection: brute-force lockout, login logs, IP blacklist/whitelist, custo
 * Admin email on lockout (optional, threshold).
 * Login log (success, failed, lockout, blocked, CAPTCHA fail, 2FA fail, backup code used, email failure) with filter, search, CSV export, daily pruning in batches.
 * IP whitelist / blacklist: single IP, range (a - b), CIDR, IPv6. Whitelist wins.
-* IP detection: REMOTE_ADDR (default), Cloudflare (header trusted only from Cloudflare ranges), X-Forwarded-For / X-Real-IP (trusted only from your proxies).
+* IP detection: REMOTE_ADDR (default), Cloudflare (header trusted only from Cloudflare ranges), X-Forwarded-For / X-Real-IP (trusted only from your proxies). Warns when a site behind Cloudflare or a proxy still reads REMOTE_ADDR, with a one-click fix.
 * Custom messages: generic "username or password incorrect", attempts left, locked out, blacklisted.
 * CAPTCHA: Google reCAPTCHA v2 / v3 or Cloudflare Turnstile on wp-login (login, register, lost password), WooCommerce (login, register, lost password, checkout login) and comments. Programmatic calls by other plugins are never blocked.
 * Two-factor: authenticator app (TOTP, QR set-up), email code, 10 one-time backup codes, required per role (super admins included on multisite), in-login enrollment when only the app is allowed, admin reset for lost phones.
@@ -34,6 +34,10 @@ Add `define( 'SITEGUARD_DISABLE', true );` to wp-config.php, or rename the plugi
 The plugin checks https://github.com/faidodaisen/siteguard-security releases every 6 hours and offers new versions in Dashboard → Updates and Plugins. No account or token is needed.
 
 == Changelog ==
+
+= 1.1.0 =
+* Warning in wp-admin when the site is behind Cloudflare (or a private proxy) but IP detection is still REMOTE_ADDR, so lockouts and logs record the proxy IP. One click switches to CF-Connecting-IP (or X-Forwarded-For). Nothing changes until an admin clicks.
+* Dashboard shows the IP SiteGuard uses, the detection method, and the connecting address when they differ.
 
 = 1.0.3 =
 * Repository is now public: updates work without a GitHub token.

@@ -22,6 +22,8 @@ jobs:
           coverage: none
       - name: PHP syntax check
         run: find . -name '*.php' -not -path './.git/*' -print0 | xargs -0 -n1 php -l
+      - name: Tests
+        run: for t in tests/test-*.php; do php "$t" || exit 1; done
 
   release:
     needs: lint
@@ -44,7 +46,7 @@ jobs:
       - name: Build zip
         run: |
           mkdir -p build/siteguard-security
-          rsync -a --exclude '.git' --exclude '.github' --exclude 'build' --exclude '.gitignore' --exclude '.gitattributes' --exclude 'README.md' --exclude 'CHANGELOG.md' --exclude 'LICENSE' ./ build/siteguard-security/
+          rsync -a --exclude '.git' --exclude '.github' --exclude 'build' --exclude '.gitignore' --exclude '.gitattributes' --exclude 'README.md' --exclude 'CHANGELOG.md' --exclude 'LICENSE' --exclude 'tests' ./ build/siteguard-security/
           cd build && zip -qr siteguard-security.zip siteguard-security
           unzip -l siteguard-security.zip | tail -n 3
 

@@ -15,6 +15,46 @@ class SiteGuard_Admin {
 		add_action( 'admin_post_siteguard_action', array( __CLASS__, 'action' ) );
 		add_filter( 'plugin_action_links_' . plugin_basename( SITEGUARD_FILE ), array( __CLASS__, 'links' ) );
 		add_action( 'admin_notices', array( __CLASS__, 'conflict_notice' ) );
+		add_action( 'admin_post_siteguard_fix_ip', array( __CLASS__, 'fix_ip' ) );
+		add_action( 'admin_notices', array( __CLASS__, 'ip_notice' ) );
+	}
+
+	/** Site-wide warning when ip_method still reads a proxy's address (SiteGuard screens render their own). */
+	public static function ip_notice() {
+		if ( ! current_user_can( self::CAP ) ) {
+			return;
+		}
+		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+		if ( $screen && false !== strpos( (string) $screen->id, self::SLUG ) ) {
+			return;
+		}
+		echo self::ip_warning(); // phpcs:ignore -- escaped inside.
+	}
+
+	/** Yellow notice with a one-click fix, or '' when the IP setting is fine. */
+	public static function ip_warning() {
+		$m = SiteGuard_IP::misconfiguration();
+		if ( ! $m ) {
+			return '';
+		}
+		$cf = 'HTTP_CF_CONNECTING_IP' === $m['method'];
+		if ( $cf ) {
+			/* translators: 1: Cloudflare edge IP, 2: visitor's real IP */
+			$text   = __( 'This site is behind Cloudflare, but SiteGuard is reading the Cloudflare IP (%1$s) instead of the visitor\'s real IP (%2$s). Brute-force lockouts then block a Cloudflare edge shared by many real visitors, and Login Logs and IP lists record the wrong address.', 'siteguard-security' );
+			$button = __( 'Use CF-Connecting-IP', 'siteguard-security' );
+		} else {
+			/* translators: 1: proxy IP, 2: visitor's real IP */
+			$text   = __( 'This site is behind a proxy or load balancer, but SiteGuard is reading the proxy IP (%1$s) instead of the visitor\'s real IP (%2$s). Brute-force lockouts then block every visitor behind that proxy, and Login Logs and IP lists record the wrong address.', 'siteguard-security' );
+			$button = __( 'Use X-Forwarded-For', 'siteguard-security' );
+		}
+		$out  = '<div class="notice notice-warning"><p><strong>SiteGuard:</strong> ' . esc_html( sprintf( $text, $m['peer'], $m['client'] ) ) . '</p>';
+		$out .= '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="margin:0 0 10px">';
+		$out .= '<input type="hidden" name="action" value="siteguard_fix_ip"><input type="hidden" name="method" value="' . esc_attr( $m['method'] ) . '">';
+		$out .= wp_nonce_field( 'siteguard_fix_ip', '_wpnonce', true, false );
+		$out .= '<button type="submit" class="button button-primary">' . esc_html( $button ) . '</button> ';
+		$out .= '<a href="' . esc_url( self::url( 'bruteforce' ) ) . '">' . esc_html__( 'Open IP detection settings', 'siteguard-security' ) . '</a>';
+		$out .= '</form></div>';
+		return $out;
 	}
 
 	/** Other plugins that also run a login 2FA / lockout step. */
@@ -93,6 +133,7 @@ class SiteGuard_Admin {
 		<div class="wrap siteguard">
 			<h1><span class="dashicons dashicons-shield" style="font-size:28px;width:28px;height:28px;margin-right:6px"></span>SiteGuard Security</h1>
 			<?php self::notices(); ?>
+			<?php echo self::ip_warning(); // phpcs:ignore -- escaped inside. ?>
 			<nav class="nav-tab-wrapper">
 				<?php foreach ( $tabs as $k => $label ) : ?>
 					<a href="<?php echo esc_url( self::url( $k ) ); ?>" class="nav-tab <?php echo $tab === $k ? 'nav-tab-active' : ''; ?>"><?php echo esc_html( $label ); ?></a>
@@ -133,6 +174,8 @@ class SiteGuard_Admin {
 			'blacklisted' => array( 'success', __( 'IP added to blacklist.', 'siteguard-security' ) ),
 			'checked'  => array( 'success', __( 'Checked GitHub for updates.', 'siteguard-security' ) ),
 			'token'    => array( 'success', __( 'Update token saved.', 'siteguard-security' ) ),
+			'ipfixed'  => array( 'success', __( 'IP detection updated. SiteGuard now records the visitor\'s real IP. Lockouts recorded earlier against the proxy IP expire on their own, or use Unlock all below.', 'siteguard-security' ) ),
+			'ipnochange' => array( 'warning', __( 'IP detection was not changed: this request no longer shows the proxy problem. Check the Brute Force tab.', 'siteguard-security' ) ),
 			'selfblock' => array( 'error', __( 'Your own IP is in the blacklist. It was saved, but add your IP to the whitelist or you will be locked out on next login.', 'siteguard-security' ) ),
 		);
 		$k = isset( $_GET['sg_msg'] ) ? sanitize_key( $_GET['sg_msg'] ) : ''; // phpcs:ignore
@@ -188,6 +231,7 @@ class SiteGuard_Admin {
 		$nlck = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$ips} WHERE locked_until > %d", time() ) ); // phpcs:ignore
 		$o    = SiteGuard_Options::all();
 		$me   = SiteGuard_IP::current();
+		$peer = SiteGuard_IP::peer();
 		$pill = function ( $on, $txt_on = 'On', $txt_off = 'Off' ) {
 			return '<span class="sg-pill ' . ( $on ? 'sg-ok' : 'sg-warn' ) . '">' . esc_html( $on ? $txt_on : $txt_off ) . '</span>';
 		};
@@ -200,7 +244,11 @@ class SiteGuard_Admin {
 		</div>
 		<table class="widefat striped" style="max-width:720px">
 			<tbody>
-				<tr><td><?php esc_html_e( 'Your IP', 'siteguard-security' ); ?></td><td><code><?php echo esc_html( $me ); ?></code> <?php echo SiteGuard_IP::is_whitelisted( $me ) ? '<span class="sg-pill sg-ok">whitelisted</span>' : ''; ?> <span class="description">(<?php echo esc_html( $o['ip_method'] ); ?>)</span></td></tr>
+				<tr><td><?php esc_html_e( 'Your IP', 'siteguard-security' ); ?></td><td><code><?php echo esc_html( $me ); ?></code> <?php echo SiteGuard_IP::is_whitelisted( $me ) ? '<span class="sg-pill sg-ok">whitelisted</span>' : ''; ?> <?php echo SiteGuard_IP::misconfiguration() ? '<span class="sg-pill sg-warn">' . esc_html__( 'proxy IP, see warning above', 'siteguard-security' ) . '</span>' : ''; ?> <span class="description">(<?php echo esc_html( sprintf( __( 'detected via %s', 'siteguard-security' ), SiteGuard_IP::METHODS[ $o['ip_method'] ] ?? $o['ip_method'] ) ); ?>)</span>
+					<?php if ( '' !== $peer && $peer !== $me ) : ?>
+						<br><span class="description"><?php esc_html_e( 'Connection from', 'siteguard-security' ); ?> <code><?php echo esc_html( $peer ); ?></code> (REMOTE_ADDR<?php echo SiteGuard_IP::in_list( $peer, SiteGuard_IP::CLOUDFLARE ) ? ', Cloudflare' : ''; ?>)</span>
+					<?php endif; ?>
+				</td></tr>
 				<tr><td><?php esc_html_e( 'Brute-force protection', 'siteguard-security' ); ?></td><td><?php echo $pill( $o['bf_enabled'] ); // phpcs:ignore ?> <?php echo esc_html( sprintf( '%d tries → %d min lockout; %d lockouts → %d h', $o['max_retries'], $o['lockout_minutes'], $o['max_lockouts'], $o['extended_hours'] ) ); ?></td></tr>
 				<tr><td>CAPTCHA</td><td><?php echo $pill( SiteGuard_Captcha::active(), SiteGuard_Captcha::PROVIDERS[ $o['captcha_provider'] ] ?? 'On', 'Off' ); // phpcs:ignore ?></td></tr>
 				<tr><td><?php esc_html_e( 'Two-factor', 'siteguard-security' ); ?></td><td><?php echo $pill( $o['tfa_enabled'] ); // phpcs:ignore ?> <?php echo $o['tfa_force_roles'] ? esc_html( 'Required for: ' . implode( ', ', $o['tfa_force_roles'] ) ) : ''; ?></td></tr>
@@ -518,6 +566,24 @@ class SiteGuard_Admin {
 			$msg = 'selfblock';
 		}
 		wp_safe_redirect( self::url( $tab, array( 'sg_msg' => $msg ) ) );
+		exit;
+	}
+
+	/** One-click fix from the proxy warning: switch ip_method to the method it suggested. */
+	public static function fix_ip() {
+		if ( ! current_user_can( self::CAP ) || ! check_admin_referer( 'siteguard_fix_ip' ) ) {
+			wp_die( 'Forbidden', 403 );
+		}
+		$want = isset( $_POST['method'] ) ? sanitize_text_field( wp_unslash( $_POST['method'] ) ) : '';
+		$m    = SiteGuard_IP::misconfiguration();
+		// Re-check on this very request: only apply the method the detector suggests right now.
+		if ( ! $m || $m['method'] !== $want ) {
+			wp_safe_redirect( self::url( 'bruteforce', array( 'sg_msg' => 'ipnochange' ) ) );
+			exit;
+		}
+		SiteGuard_Options::update( array( 'ip_method' => $m['method'] ) );
+		$msg = SiteGuard_IP::is_blacklisted() ? 'selfblock' : 'ipfixed';
+		wp_safe_redirect( self::url( 'dashboard', array( 'sg_msg' => $msg ) ) );
 		exit;
 	}
 
